@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>贪吃蛇 · WASD</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>贪吃蛇</h1>
+      <div class="hud">
+        <div class="stat"><span class="label">分数</span><span id="score">0</span></div>
+        <div class="stat"><span class="label">最高分</span><span id="best">0</span></div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" width="400" height="400"></canvas>
+      <div id="overlay" class="overlay">
+        <div id="overlay-inner">
+          <p id="overlay-title">贪吃蛇</p>
+          <p id="overlay-sub">按 <b>W A S D</b> 或方向键移动</p>
+          <button id="start-btn">开始游戏</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p class="hint">W ↑ &nbsp;·&nbsp; S ↓ &nbsp;·&nbsp; A ← &nbsp;·&nbsp; D → &nbsp;&nbsp;(空格：暂停)</p>
+    </footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

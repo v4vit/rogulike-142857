@@ -1,0 +1,74 @@
+[
+  {
+    "timestamp": "2026-08-11 09:17:56",
+    "mode": "grid",
+    "rounds": 20,
+    "hits": 20,
+    "misses": 1,
+    "accuracy": 95.2,
+    "score": 3289,
+    "avg_ms": 1003.8,
+    "max_combo": 10,
+    "duration_s": 23.4
+  },
+  {
+    "timestamp": "2026-08-11 09:26:29",
+    "mode": "grid",
+    "rounds": 20,
+    "hits": 20,
+    "misses": 0,
+    "accuracy": 100.0,
+    "score": 4007,
+    "avg_ms": 856.2,
+    "max_combo": 20,
+    "duration_s": 20.5
+  },
+  {
+    "timestamp": "2026-08-11 09:50:24",
+    "mode": "grid",
+    "rounds": 20,
+    "hits": 20,
+    "misses": 0,
+    "accuracy": 100.0,
+    "score": 4212,
+    "avg_ms": 761.5,
+    "max_combo": 20,
+    "duration_s": 18.5
+  },
+  {
+    "timestamp": "2026-08-11 10:02:02",
+    "mode": "grid",
+    "rounds": 20,
+    "hits": 20,
+    "misses": 0,
+    "accuracy": 100.0,
+    "score": 4107,
+    "avg_ms": 860.8,
+    "max_combo": 20,
+    "duration_s": 20.5
+  },
+  {
+    "timestamp": "2026-08-11 10:02:25",
+    "mode": "grid",
+    "rounds": 20,
+    "hits": 20,
+    "misses": 0,
+    "accuracy": 100.0,
+    "score": 4066,
+    "avg_ms": 755.4,
+    "max_combo": 20,
+    "duration_s": 18.4
+  },
+  {
+    "timestamp": "2026-08-11 10:02:49",
+    "mode": "move",
+    "rounds": 20,
+    "hits": 20,
+    "misses": 1,
+    "accuracy": 95.2,
+    "score": 3489,
+    "avg_ms": 733.7,
+    "max_combo": 11,
+    "duration_s": 17.9
+  }
+]
