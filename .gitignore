@@ -1,0 +1,11 @@
+# ---- Python 编译缓存 ----
+__pycache__/
+*.py[cod]
+
+# ---- PyInstaller 打包产物 (build 中间目录 / dist 输出 exe) ----
+build/
+dist/
+
+# ---- 其他 ----
+*.log
+.DS_Store
