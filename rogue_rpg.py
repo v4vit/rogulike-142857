@@ -4129,9 +4129,7 @@ class App:
         panel.pack(fill="x", pady=3)
         artbox = tk.Frame(panel, bg=COLOR_PANEL)
         artbox.pack(side="left", padx=(8, 12))
-        art_txt = "\n".join(e.art)
-        tk.Label(artbox, text=art_txt, bg=COLOR_PANEL, fg=COLOR_TEXT,
-                 font=FONT_MONO, justify="left").pack()
+        pixel_canvas(artbox, e.art).pack()
         info = tk.Frame(panel, bg=COLOR_PANEL)
         info.pack(side="left", padx=6, pady=6)
         name = e.name
@@ -5690,8 +5688,7 @@ class App:
             panel.pack(fill="x", padx=10, pady=3)
             left = tk.Frame(panel, bg=COLOR_PANEL)
             left.pack(side="left", padx=8, pady=4)
-            tk.Label(left, text="\n".join(w["art"]), bg=COLOR_PANEL, fg=COLOR_GOLD,
-                     font=FONT_MONO, justify="left").pack()
+            pixel_canvas(left, w["art"]).pack()
             right = tk.Frame(panel, bg=COLOR_PANEL)
             right.pack(side="left", padx=6, pady=4, fill="x", expand=True)
 
@@ -5749,8 +5746,7 @@ class App:
             panel.pack(fill="x", padx=10, pady=3)
             left = tk.Frame(panel, bg=COLOR_PANEL)
             left.pack(side="left", padx=8, pady=4)
-            tk.Label(left, text="\n".join(w["art"]), bg=COLOR_PANEL, fg="#ff79c6",
-                     font=FONT_MONO, justify="left").pack()
+            pixel_canvas(left, w["art"]).pack()
             right = tk.Frame(panel, bg=COLOR_PANEL)
             right.pack(side="left", padx=6, pady=4, fill="x", expand=True)
 
@@ -5809,8 +5805,7 @@ class App:
             panel.pack(fill="x", padx=10, pady=3)
             left = tk.Frame(panel, bg=COLOR_PANEL)
             left.pack(side="left", padx=8, pady=4)
-            tk.Label(left, text="\n".join(t["art"]), bg=COLOR_PANEL, fg=COLOR_ACCENT,
-                     font=FONT_MONO, justify="left").pack()
+            pixel_canvas(left, t["art"]).pack()
             right = tk.Frame(panel, bg=COLOR_PANEL)
             right.pack(side="left", padx=6, pady=4, fill="x", expand=True)
 
@@ -6069,8 +6064,7 @@ class App:
             p.pack(fill="x", padx=10, pady=3)
             left = tk.Frame(p, bg=COLOR_PANEL)
             left.pack(side="left", padx=8, pady=4)
-            tk.Label(left, text="\n".join(w["art"]), bg=COLOR_PANEL, fg=COLOR_TEXT,
-                     font=FONT_MONO, justify="left").pack()
+            pixel_canvas(left, w["art"]).pack()
             right = tk.Frame(p, bg=COLOR_PANEL)
             right.pack(side="left", padx=6, pady=4)
             tk.Label(right,
@@ -6109,8 +6103,7 @@ class App:
             p.pack(fill="x", padx=10, pady=3)
             left = tk.Frame(p, bg=COLOR_PANEL)
             left.pack(side="left", padx=8, pady=4)
-            tk.Label(left, text="\n".join(t["art"]), bg=COLOR_PANEL, fg=COLOR_ACCENT,
-                     font=FONT_MONO, justify="left").pack()
+            pixel_canvas(left, t["art"]).pack()
             right = tk.Frame(p, bg=COLOR_PANEL)
             right.pack(side="left", padx=6, pady=4)
             tk.Label(right, text=f"◆ {t['name']}  攻击+{t['atk']}  生命+{t['hp']}  蓝量+{t['mp']}",
@@ -6238,8 +6231,7 @@ class App:
                     p.pack(fill="x", padx=10, pady=2)
                     left = tk.Frame(p, bg=COLOR_PANEL)
                     left.pack(side="left", padx=8, pady=4)
-                    tk.Label(left, text="\n".join(m["art"]), bg=COLOR_PANEL, fg=COLOR_TEXT,
-                             font=FONT_MONO, justify="left").pack()
+                    pixel_canvas(left, m["art"]).pack()
                     right = tk.Frame(p, bg=COLOR_PANEL)
                     right.pack(side="left", padx=6, pady=4)
                     tk.Label(right, text=f"{m['name']}  生命{m['hp']}  攻击{m['atk']}  经验{m['exp']}",
