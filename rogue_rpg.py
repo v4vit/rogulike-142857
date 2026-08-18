@@ -708,7 +708,7 @@ def ail_desc(ail):
         return ""
     kind, n = ail
     t = {"burn": "燃烧", "poison": "中毒", "bleed": "流血", "perm_poison": "永久毒伤",
-         "freeze": "冰冻(累积3次)"}[kind]
+         "freeze": "冰冻(累积3次)", "stun": "眩晕", "perm_burn": "永久烧伤"}[kind]
     return f"异常: {t}×{n}"
 
 # ============================================================
@@ -2935,10 +2935,27 @@ class App:
                 pos[nid] = (xs[j], ys[j])
 
         cw, ch = 980, 470
-        canvas = tk.Canvas(self.content, width=cw, height=ch, bg=COLOR_BG,
-                           highlightthickness=0)
-        canvas.pack(pady=4)
-        canvas.configure(scrollregion=(0, 0, cw, ch))
+        # 计算覆盖所有节点(含最底部节点底边)的内容高度, 超出可视高度时用滚动条查看
+        for nid in nodes:
+            _x, _y = pos[nid]
+            ch = max(ch, _y + 48)
+        # 地图放在可滚动容器内: 窗口空间不足时出现右侧滚动条, 可滚动查看下方节点
+        map_wrap = tk.Frame(self.content, bg=COLOR_BG)
+        map_wrap.pack(pady=4, fill="both", expand=True)
+        canvas = tk.Canvas(map_wrap, width=cw, bg=COLOR_BG, highlightthickness=0)
+        scroll = tk.Scrollbar(map_wrap, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scroll.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
+        canvas.configure(height=min(ch, 470), scrollregion=(0, 0, cw, ch))
+        # 地图鼠标滚轮滚动 (与主内容滚轮绑定分开处理, 不冲突)
+        def _map_wheel(event):
+            try:
+                canvas.yview_scroll(int(-event.delta / 120), "units")
+            except Exception:
+                pass
+        canvas.bind("<MouseWheel>", _map_wheel)
+        map_wrap.bind("<MouseWheel>", _map_wheel)
 
         # 画连接线 (水平前进线)
         for src, dst in edges:
@@ -3374,7 +3391,7 @@ class App:
         win = tk.Toplevel(self.root)
         win.title("✦ 技能")
         win.configure(bg=COLOR_BG)
-        win.geometry("460x520")
+        win.geometry("600x680")
         win.transient(self.root)
         win.grab_set()
         win.attributes("-topmost", True)
@@ -3419,7 +3436,7 @@ class App:
             tk.Label(row, text=title_txt, bg=color, fg=COLOR_TEXT,
                      font=("Microsoft YaHei UI", 11, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
             tk.Label(row, text="     " + sk["desc"], bg=color, fg=COLOR_SUB,
-                     font=FONT_MAIN, wraplength=400, justify="left").pack(anchor="w", padx=10, pady=(1, 3))
+                     font=FONT_MAIN, wraplength=500, justify="left").pack(anchor="w", padx=10, pady=(1, 3))
             if ready:
                 b = tk.Button(row, text="施 放", bg=COLOR_OK, fg=COLOR_TEXT, relief="flat",
                               font=FONT_MAIN, bd=0, cursor="hand2", padx=14, pady=3,
