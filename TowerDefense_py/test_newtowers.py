@@ -125,13 +125,14 @@ print("  发射井全局唯一限制: OK")
 print("\n=== 7. 防御矩阵弱嘲讽 + 血量叠加 ===")
 td.reset_state(); td.S.mode='endless'; td.S.level=None
 td.S.towers.append(core)
-m1x = {'kind':'matrix','c':15,'r':15,'size':1,'x':15.5*td.CELL,'y':15.5*td.CELL,'hp':160,'maxhp':160,'cool':0}
-m2x = {'kind':'matrix','c':16,'r':16,'size':1,'x':16.5*td.CELL,'y':16.5*td.CELL,'hp':160,'maxhp':160,'cool':0}
+m1x = {'kind':'matrix','c':15,'r':15,'size':1,'x':15.5*td.CELL,'y':15.5*td.CELL,'hp':td.MATRIX_BASE_HP,'maxhp':td.MATRIX_BASE_HP,'cool':0}
+m2x = {'kind':'matrix','c':16,'r':16,'size':1,'x':16.5*td.CELL,'y':16.5*td.CELL,'hp':td.MATRIX_BASE_HP,'maxhp':td.MATRIX_BASE_HP,'cool':0}
 td.S.towers += [m1x, m2x]
-# 更新血量叠加：2个矩阵 → 上限 160+40=200
+# 更新血量叠加：2个矩阵 → 上限 MATRIX_BASE_HP + MATRIX_HP_PER_MATRIX（2026-08-20 矩阵基础血量已翻倍）
 td.update(0.1)
-assert m1x['maxhp'] == 200 and m2x['maxhp'] == 200, f"2矩阵上限应200，实际{m1x['maxhp']}"
-print("  2个矩阵上限叠加到200: OK")
+expected = td.MATRIX_BASE_HP + td.MATRIX_HP_PER_MATRIX
+assert m1x['maxhp'] == expected and m2x['maxhp'] == expected, f"2矩阵上限应{expected}，实际{m1x['maxhp']}"
+print(f"  2个矩阵上限叠加到{expected}: OK")
 # 弱嘲讽：4格内的怪被矩阵吸引
 mm3 = td.spawn_monster('red', x=16*td.CELL, y=16*td.CELL)  # 距m2x约1格
 tgt = td.acquire_target(mm3)

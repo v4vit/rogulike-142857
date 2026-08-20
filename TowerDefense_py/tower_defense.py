@@ -22,6 +22,7 @@ CANVAS_W = W + PANEL_W
 
 MAX_ENERGY = 400
 START_ENERGY = 300
+CARD_SELECT = 10                   # 无尽模式可选炮台数量（快捷键 1-9 与 0，0 对应第10个）
 SOLAR_RATE = 2.0                   # 能量/秒
 GUN_DMG = 14
 GUN_COOLDOWN = 0.5                 # DPS≈28
@@ -51,14 +52,30 @@ LIQUID_SLOW_TIME = 2.0             # 减速持续(秒)
 LIQUID_FREEZE_R = 4                # 液氮塔范围攻击半径 = 自身中心 4 格
 LIQUID_AURA_R = 4                  # 液氮塔增益范围（4格内塔攻击减速）
 LIQUID_FREEZE_TIME = 2.0           # 范围冰冻持续(秒)
-HEAL_RATE = 8                      # 治疗塔每秒治疗量
-HEAL_SHIELD = 40                   # 治疗塔给塔套的护盾值
+HEAL_MAXHP_BONUS = 1.5             # 医疗塔提升范围内塔 150% 生命上限（+150%）
+HEAL_PCT_RATE = 0.05               # 医疗塔范围内塔每秒百分比回血 5%（按当前最大生命）
 ENERGY_GAIN = 120                  # 电能包一次性获得的能量
 ENERGY_PACK_COOLDOWN = 15.0        # 电能包放置冷却(秒)
 
-# 聚焦塔（叠在光棱塔上，增加攻击目标数）
+# 聚焦塔（叠在光棱塔/审判塔上：光棱塔增加攻击目标数，审判塔缩短蓄力时间）
 FOCUS_COST = 45                    # 聚焦塔费用
-FOCUS_MAX = 2                      # 一个光棱塔最多 2 个聚焦塔
+FOCUS_MAX = 2                      # 一个光棱塔/审判塔最多 2 个聚焦塔
+
+# 审判塔（地狱塔式蓄力光束，持续攻击单一目标；每3帧出一次伤）
+JUDGE_MAX = 2                      # 审判塔全场最多 2 座
+JUDGE_COST = 150                   # 审判塔费用
+JUDGE_HP = 220                     # 审判塔生命值
+JUDGE_RANGE = 6 * CELL             # 审判塔射程(6格)
+JUDGE_COOLDOWN = 0.05              # 审判塔攻击间隔（3帧一次伤）
+JUDGE_RAMP_TIME = 3.0              # 达到最大伤害所需时间(秒)
+JUDGE_FOCUS_RAMP_FACTOR = 0.7      # 每个聚焦塔使蓄力时间 ×0.7
+GUN_DPS = GUN_DMG / GUN_COOLDOWN   # 机枪塔 DPS（基准）
+JUDGE_MIN_DPS = 0.7 * GUN_DPS      # 审判塔初始 DPS = 0.7 × 机枪塔
+JUDGE_MAX_DPS = 30 * GUN_DPS       # 审判塔最大 DPS = 30 × 机枪塔（加强：15→30）
+JUDGE_MIN_DMG = JUDGE_MIN_DPS * JUDGE_COOLDOWN   # 每帧初始伤害
+JUDGE_MAX_DMG = JUDGE_MAX_DPS * JUDGE_COOLDOWN   # 每帧最大伤害
+JUDGE_EXPLODE_PCT = 0.15           # 击杀爆炸伤害 = 目标最大生命值 × 15%
+JUDGE_EXPLODE_R = 2 * CELL         # 击杀爆炸范围半径(2格)
 
 # 迷你核弹单元（触碰/摧毁触发核爆 + 留下核辐射区域）
 MININUKE_DMG_FACTOR = 4.0          # 核爆伤害 = 4 × 红球血量
@@ -83,14 +100,14 @@ SILO_EXPLODE_FACTOR = 1.5          # 发射井导弹爆炸半径 = 导弹塔 × 
 
 # 防御矩阵（弱嘲讽 4 格，种越多血量越多）
 MATRIX_COST = 30                   # 防御矩阵费用
-MATRIX_BASE_HP = 160               # 基础血量 = 嘲讽塔(320) 一半
+MATRIX_BASE_HP = 320               # 基础血量（2026-08-20 翻2倍，原160）
 MATRIX_HP_PER_MATRIX = 40          # 场上每多 1 个矩阵，所有矩阵血量上限 +40
 MATRIX_TAUNT_RANGE = 4 * CELL      # 弱嘲讽范围(4格)
 
 # 强化黑球传送范围（圆形半径，单位：格）
 ELITE_BLACK_RADIUS = 2.7           # 范围圆半径(格)
 ELITE_BLACK_PORT_DMG = 30          # 强化黑传送落地对目标塔造成的伤害（小幅削弱）
-ELITE_BLACK_PORT_CD = 2.0          # 强化黑传送技能的冷却时间(秒)
+ELITE_BLACK_PORT_CD = 0.5          # 强化黑传送技能的冷却时间(秒)（加强：2.0→0.5）
 
 # 出怪点数量与大小
 NUM_SPAWN = 5
@@ -104,7 +121,7 @@ TOWER_DEFS = {
                   "desc": "持续产出能量（2/秒），是建造其他塔的经济基础，多造可提升能量积累速度。"},
     "gun":       {"name": "机枪塔",   "size": 2, "cost": 60, "hp": 220, "color": "#4aa8f0",
                   "desc": "自动攻击射程内最靠左（最接近基地）的敌人，单体高频率输出（每次14伤害，0.5秒一发）。可加装齿轮提升攻速。无敌人时攻击射程内的裂隙出怪点。"},
-    "taunt":     {"name": "嘲讽塔",   "size": 1, "cost": 80, "hp": 320, "color": "#f85149",
+    "taunt":     {"name": "嘲讽塔",   "size": 1, "cost": 80, "hp": 640, "color": "#f85149",
                   "desc": "吸引 5 格范围内所有怪物强制攻击它（无视其他锁定），用于把怪物火力集中到自己身上，保护主力输出塔。"},
     "gear":      {"name": "齿轮塔",   "size": 0, "cost": 45, "hp": 0,   "color": "#e3b341", "gear": True,
                   "desc": "只能叠放在机枪/导弹/液氮/发射井塔上（点其占用格），每个塔最多2个。每装1个使被加装塔冷却 ×0.7（攻速约提升43%）。"},
@@ -119,11 +136,13 @@ TOWER_DEFS = {
     "healer":    {"name": "治疗塔",   "size": 2, "cost": 60, "hp": 110, "color": "#50fa7b", "range": 4 * CELL,
                   "desc": "每秒治疗4格范围内其他塔 8 点生命，并为其维持 40 点护盾，延长防线寿命。"},
     "focus":     {"name": "聚焦塔",   "size": 0, "cost": FOCUS_COST, "hp": 0, "color": "#d2a8ff", "focus": True,
-                  "desc": "只能叠放在光棱塔上（点其占用格），每个光棱塔最多2个。每装1个使光棱塔额外增加1个攻击目标（可同时锁定多敌）。"},
+                  "desc": "只能叠放在光棱塔或审判塔上（点其占用格），每座最多2个。叠在光棱塔上：每装1个使光棱塔额外增加1个攻击目标（可同时锁定多敌）；叠在审判塔上：每装1个使审判塔达到最大伤害的时间缩短（×0.7）。"},
     "mininuke":  {"name": "迷你核弹单元", "size": 1, "cost": 35, "hp": 50, "color": "#f5a623",
                   "desc": "地雷式核弹：被怪物触碰或被摧毁时引爆，对半径3.5格造成 4× 当前红球血量核爆伤害，并留下持续6秒的核辐射区域（3帧一次伤，DPS与机枪塔持平）。"},
     "flamer":    {"name": "喷火器",   "size": 2, "cost": 90, "hp": 180, "color": "#ff7b00", "range": GUN_RANGE,
                   "desc": "朝射程内敌人喷射锥形火焰（扇形范围AOE，3帧一次伤，对单DPS为机枪塔1.3倍），火焰特效真实模拟现实喷火器。受液氮塔减速增益时喷出蓝色减速火。"},
+    "judge":     {"name": "审判塔",   "size": 2, "cost": JUDGE_COST, "hp": JUDGE_HP, "color": "#ff5a5a", "range": JUDGE_RANGE,
+                  "desc": "地狱塔式蓄力光束塔：锁定一个目标持续发射光束（3帧一次伤），伤害随攻击时间线性增长，约3秒达到机枪塔30倍DPS（初始0.7倍）。转火重置伤害但无真空期。击杀目标时不触发对方亡语并引发爆炸（目标生命15%，至少一红，2格范围）。全场最多2座，可叠聚焦塔缩短蓄力时间。"},
     "silode":    {"name": "发射井",   "size": 3, "cost": SILO_COST, "hp": 220, "color": "#6b6b6b", "range": 14 * CELL, "gearable": True,
                   "desc": "占地3×3，全局仅能建造1座。先右键发射井进入锁定模式，再点击地图任意位置锁定目标点，之后持续向该点发射导弹（伤害为导弹塔2倍、爆炸半径1.5倍，可加装齿轮）。"},
     "matrix":    {"name": "防御矩阵", "size": 1, "cost": MATRIX_COST, "hp": MATRIX_BASE_HP, "color": "#7ee787",
@@ -156,12 +175,25 @@ MON_DEFS = {
                "desc": "强化·绿（第5波起出现）：血量翻倍、体型巨大，且自带嘲讽吸引范围内塔优先攻击它。死亡时爆炸，对周围2.5格内塔造成伤害，并分裂出两只普通绿。"},
     "bblue":  {"name": "强·蓝",  "color": "#58a6ff", "r": 8,  "speed": 3.15, "hp_mult": 1.0, "atk": 10, "weight": 1, "revive": None, "elite": True, "aura": True,
                "desc": "强化·蓝（第5波起出现）：移速极快，自带加速光环，将6格内友军移速提升至与自身一致，配合成群敌人会迅速突破防线。"},
-    "bwhite": {"name": "强·白",  "color": "#e6edf3", "r": 11, "speed": 1.1, "hp_mult": 1.0, "atk": 8,  "weight": 0, "revive": None, "elite": True, "spawner": True, "summon": True,
-               "desc": "强化·白（第5波起，每波的白/强白随机出）：红眼拖尾。活着时每2秒在自身范围内召唤一只普通怪；死亡后仍生成裂隙出怪点，比普通白更棘手。"},
+    "bwhite": {"name": "强·白",  "color": "#e6edf3", "r": 11, "speed": 0.55, "hp_mult": 1.0, "atk": 8,  "weight": 0, "revive": None, "elite": True, "spawner": True, "summon": True,
+               "desc": "强化·白（第5波起，每波的白/强白随机出）：红眼拖尾。移速降为原来一半且不受强化蓝加速光环影响。活着时每2秒在自身范围内召唤一只普通怪；死亡后仍生成裂隙出怪点，比普通白更棘手。"},
     "bred":   {"name": "强·红",  "color": "#f85149", "r": 10, "speed": 2.1, "hp_mult": 2.0, "atk": 8,  "weight": 1, "revive": None, "elite": True, "ram": True,
                "desc": "强化·红（第5波起出现，金球也会把红球转化为它）：速度与强化蓝一致，冲撞到塔会造成大量伤害，是高速攻坚单位。"},
     "gold":   {"name": "金·核心", "color": "#f5c542", "r": 13, "speed": 0.3, "hp_mult": 12.0, "atk": 0,  "weight": 0, "revive": None, "gold": True,
-               "desc": "金·核心（第5波起每两波出一个）：血量与强化绿相同、移动极慢。每3秒把自身范围内（除白与强化白和自己）的普通球转化为同色强化球，是精英制造者，务必优先击破。"},
+               "desc": "金·核心（第5波起每两波出一个）：血量与强化绿相同、移动极慢。每3秒把自身范围内（除白与强化白和自己）的普通球转化为同色强化球，是精英制造者，务必优先击破。出现时有概率伴生银球。"},
+    # ---- 铁球/强化铁球/银球（第 5 波起出现，均视为精英球） ----
+    # iron_limit=True：每秒最多承受 IRON_HITS_PER_SEC 次伤害
+    # biron 额外有 shield_ally=True：替 3 格半径内球承受伤害
+    # silver 与强化白功能一致（召唤 + 死亡生成裂隙），无强化形态
+    "iron":   {"name": "铁·钢躯", "color": "#8d9199", "r": 11, "speed": 1.0, "hp_mult": 5.0, "atk": 8,  "weight": 1, "revive": None, "elite": True, "iron_limit": True,
+               "desc": "铁·钢躯（第5波起与白球同机制每波必出1只）：血量 5 倍红球，且每秒最多承受 10 次伤害（高频攻击被大幅克制），8 波后必定为强化形态。"},
+    "biron":  {"name": "强·铁", "color": "#5c6370", "r": 14, "speed": 1.0, "hp_mult": 20.0, "atk": 10, "weight": 1, "revive": None, "elite": True, "iron_limit": True, "shield_ally": True,
+               "desc": "强化·铁（第5波起与白球同机制）：血量 10 倍绿球，每秒最多承受 10 次伤害，且会替 3 格半径范围内的球承受伤害（群体肉盾）。"},
+    "silver": {"name": "银·召唤", "color": "#c0c6cf", "r": 13, "speed": 0.3, "hp_mult": 12.0, "atk": 8,  "weight": 0, "revive": None, "elite": True, "spawner": True, "summon": True,
+               "desc": "银·召唤（金球出现时 50% 概率伴生，固定在其强化范围内）：速度/血量同金球，拥有强化白的一切功能（存活时召唤、死亡生成裂隙出怪点），无强化形态。"},
+    # 护卫球（红球铁盔铁剑，近塔加速、首次冲撞+召唤强化红球）
+    "guard":  {"name": "护卫·红", "color": "#f85149", "r": 12, "speed": 1.1, "hp_mult": 10.0, "atk": 42, "weight": 1, "revive": None, "elite": True, "guard": True,
+               "desc": "护卫·红：红球头顶铁盔、身携铁剑。攻击为黑球3倍、血量5倍绿球。靠近塔时移速大幅加快，首次攻击冲撞塔并生成1-3只强化红球。"},
     # ---- 三棱锥类敌人（第 6 波起出现） ----
     # 锥类：一边自转一边向前移动；cone=True 标记为锥类（金球转化、白球召唤均不作用于锥类）
     "rcone":  {"name": "红锥",   "color": "#ff6b6b", "r": 10, "speed": 1.0, "hp_mult": 1.0, "atk": 10, "weight": 2, "revive": None, "cone": True, "shoot": True,
@@ -198,6 +230,20 @@ BRED_RAM_DMG = 80             # 强化红撞塔一次性伤害
 BRED_RAM_COOLDOWN = 1.5       # 强化红撞塔冷却(秒)
 SPAWN_INTERVAL = 0.8          # 出怪间隔(秒/只)，已加强（原1.1）
 
+# 铁球/强化铁球（第 5 波起，出现机制与白球一致，每波必出 1 只）
+IRON_MIN_WAVE = 5             # 第 5 波起每波必出 1 只铁球/强化铁球（与白球一致）
+IRON_ELITE_CHANCE = 0.5       # 第 8 波前铁球为强化形态的概率
+IRON_ALWAYS_ELITE_WAVE = 8    # 第 8 波后（>8）必定为强化铁球
+IRON_HITS_PER_SEC = 10        # 铁球每秒最多承受 10 次伤害（无论单次伤害大小）
+IRON_SHIELD_R = 3             # 强化铁球替伤范围半径(格)：替 3 格半径内球承受伤害
+# 银球（金球伴生）
+SILVER_SPAWN_CHANCE = 0.5     # 金球出现时伴生银球的概率
+# 护卫球（红球铁盔铁剑，近塔加速、首次冲撞+召唤强化红球）
+GUARD_RAM_DMG = 120           # 护卫球首次冲撞塔伤害
+GUARD_SPEED_BOOST = 2.5       # 靠近塔时移速倍率（大幅加快）
+GUARD_BOOST_RANGE = 6 * CELL  # 触发近塔加速的距离(px)
+GUARD_SUMMON_MIN, GUARD_SUMMON_MAX = 1, 3   # 首次冲撞后生成强化红球数量区间
+
 # ===== 三棱锥类敌人机制配置 =====
 CONE_MIN_WAVE = 6             # 第 6 波起锥类敌人出现（普通出怪池 + 新增锥类刷怪点）
 CONE_SPAWN_MIN_DIST = 20      # 锥类刷怪点中心距主基地中心的最小距离(格)，避免刷在塔前
@@ -211,7 +257,7 @@ CONE_BEAM_SPEED = 420         # 锥光束飞行 px/s
 CONE_SILENCE_TIME = 3.0       # 黑锥/强黑锥沉默持续时间(秒)
 BCONEK_SILENCE_R = 3          # 强黑锥范围沉默半径(格)
 BCONEK_SHIELD_CHARGES = 10    # 强黑锥次数盾层数（需10次攻击击破）
-WCONE_DRAIN = 40              # 白锥每秒自扣血量
+WCONE_LIFE_TIME = 30.0        # 白锥/强化白锥在场存活时间(秒)：每秒自扣 maxhp/30
 WCONE_SUMMON_INTERVAL = 2.0   # 白锥召唤间隔(秒)
 WCONE_SUMMON_R = 2.2          # 白锥召唤范围(格)
 WCONE_MIN_WAVE = 6            # 白锥/强白锥第 6 波起每波必出 1 只
@@ -261,7 +307,8 @@ def random_mon_key(wave=1):
     """按权重随机出怪；白/强白/金球/白锥/强白锥走专门机制不在此池；
     第 5 波前不出强化球；第 6 波前不出锥类敌人"""
     keys = [k for k in MON_KEYS
-            if k not in ("white", "bwhite", "gold", "wcone", "bconew")]
+            if k not in ("white", "bwhite", "gold", "wcone", "bconew",
+                         "iron", "biron", "silver")]
     if wave < CONE_MIN_WAVE:
         keys = [k for k in keys if not MON_DEFS[k].get("cone")]
     if wave < ELITE_MIN_WAVE:
@@ -381,9 +428,11 @@ S.effects = []         # 视觉特效（范围圆/传送光效）
 S.wspawns = []         # 白球生成的 1×1 出怪点（可被机枪摧毁、独立定时出怪）
 S.white_pending = False  # 本波是否出 1 只白球/强化白
 S.gold_pending = False   # 本波是否必出 1 只金球
+S.iron_pending = False   # 本波是否出 1 只铁球/强化铁球（机制与白球一致）
 S.wcone_pending = False  # 本波是否出 1 只白锥/强化白锥
 S.conespawn = None       # 第 6 波起的锥类专用刷怪点
 S.silo_locking = None    # 发射井锁定模式（当前等待选择目标点的发射井）
+S.crane_mode = False     # 起吊机模式（F1 切换：点击塔移除并返还30%能量）
 S.hundred_timer = 0.0    # 百球行来袭警告倒计时(秒)，>0 表示即将触发
 S.energy_cd = 0.0        # 电能包放置冷却剩余时间(秒)
 S.mode = "endless"       # 游戏模式：endless 无尽 / level 关卡
@@ -436,7 +485,25 @@ def spawn_monster(mtype, x=None, y=None, hp=None):
         m["trail_t"] = 0.0
     if d.get("cshield"):
         m["cshields"] = d["cshield"]   # 次数盾（强黑锥：25 层，每击消耗 1 层）
+    if d.get("iron_limit"):
+        m["hit_window"] = 0.0    # 铁球每秒伤害次数窗口起点
+        m["hit_count"] = 0       # 本窗口内已受伤害次数
     return m
+
+def spawn_gold_with_silver(x=None, y=None):
+    """生成金球，并有 50% 概率在其强化范围内伴生一只银球（银球只随金球出现）。"""
+    g = spawn_monster("gold", x=x, y=y)
+    S.monsters.append(g)
+    if random.random() < SILVER_SPAWN_CHANCE:
+        RR = GOLD_TRANSFORM_R * CELL
+        sx = g["x"] + random.uniform(-RR * 0.6, RR * 0.6)
+        sy = g["y"] + random.uniform(-RR * 0.6, RR * 0.6)
+        sil = spawn_monster("silver", x=sx, y=sy)
+        S.monsters.append(sil)
+        add_effect("spark", sil["x"], sil["y"], r=CELL * 0.8,
+                   color="#c0c6cf", life=0.6)
+        log("💠 银·召唤 随金球伴生！", "warn")
+    return g
 
 def can_build(c, r, size):
     for dr in range(size):
@@ -455,6 +522,10 @@ def place_tower(kind, c, r):
     # 发射井：全局仅能放置 1 个
     if kind == "silode" and any(t["kind"] == "silode" and not t.get("removed") for t in S.towers):
         log("发射井全局只能建造 1 座！", "warn"); return False
+    # 审判塔：全场最多放置 2 个
+    if kind == "judge" and sum(1 for t in S.towers
+                               if t["kind"] == "judge" and not t.get("removed")) >= JUDGE_MAX:
+        log(f"审判塔全场最多建造 {JUDGE_MAX} 座！", "warn"); return False
     # 电能包：有 15 秒放置冷却，冷却中不可放置
     if d.get("onetime") == "energy" and S.energy_cd > 0:
         log(f"⚡ 电能包冷却中（{S.energy_cd:.0f}秒）！", "warn")
@@ -469,7 +540,8 @@ def place_tower(kind, c, r):
             grid[r + dr][c + dc] = 3
     t = {"kind": kind, "c": c, "r": r, "size": d["size"],
          "x": (c + d["size"] / 2) * CELL, "y": (r + d["size"] / 2) * CELL,
-         "hp": d["hp"], "maxhp": d["hp"], "cool": 0, "shield": 0}
+         "hp": d["hp"], "maxhp": d["hp"], "base_maxhp": d["hp"],
+         "cool": 0, "shield": 0}
     if "range" in d:
         t["range"] = d["range"]
     if kind in ("gun", "missile", "liquid", "silode"):
@@ -479,6 +551,10 @@ def place_tower(kind, c, r):
     if kind == "prism":
         t["locks"] = []       # 光棱塔锁定目标列表（聚焦塔可增加目标数）
         t["focuses"] = 0      # 光棱塔上装的聚焦塔数量
+    if kind == "judge":
+        t["locks"] = []       # 审判塔锁定目标列表（始终 1 个目标）
+        t["focuses"] = 0      # 审判塔上装的聚焦塔数量（缩短蓄力时间）
+        t["judge_t"] = 0.0    # 当前蓄力进度（用于计算当前伤害）
     if kind == "flamer":
         t["aim"] = 0.0        # 喷火器当前喷射方向角(弧度)
     if kind == "silode":
@@ -521,23 +597,24 @@ def place_gear_at(c, r):
     return True
 
 def place_focus_at(c, r):
-    """聚焦塔：只能叠放在光棱塔上，最多 FOCUS_MAX 个，每个增加 1 个攻击目标。点击塔所占格子生效"""
+    """聚焦塔：只能叠放在光棱塔或审判塔上，最多 FOCUS_MAX 个。
+    叠在光棱塔上增加攻击目标数；叠在审判塔上缩短蓄力时间。点击塔所占格子生效"""
     cost = TOWER_DEFS["focus"]["cost"]
     if S.energy < cost:
         log("能量不足！", "warn"); return False
-    # 找到覆盖 (c, r) 的光棱塔
+    # 找到覆盖 (c, r) 的光棱塔/审判塔
     base = None
     for t in S.towers:
-        if t.get("removed") or t["kind"] != "prism":
+        if t.get("removed") or t["kind"] not in ("prism", "judge"):
             continue
         if t["c"] <= c < t["c"] + t["size"] and t["r"] <= r < t["r"] + t["size"]:
             base = t
             break
     if base is None:
-        log("聚焦塔只能种在光棱塔上！", "warn"); return False
+        log("聚焦塔只能种在光棱塔或审判塔上！", "warn"); return False
     base.setdefault("focuses", 0)
     if base["focuses"] >= FOCUS_MAX:
-        log("该光棱塔已装满聚焦塔（最多2个）！", "warn"); return False
+        log("该塔已装满聚焦塔（最多2个）！", "warn"); return False
     S.energy -= cost
     base["focuses"] += 1
     log(f"🎯 加装聚焦塔 ({base['focuses']}/{FOCUS_MAX})，攻击目标数提升!", "info")
@@ -685,7 +762,25 @@ def _bgreen_explode(m):
     add_effect("range", m["x"], m["y"], r=R, color="#7ee787", life=0.5)
     log("💥 强化绿爆炸! 生成两个普通绿", "warn")
 
-def damage_monster(m, dmg):
+def damage_monster(m, dmg, no_death_effect=False, _redirect_guard=False):
+    """对怪物造成伤害。no_death_effect=True 时，若该次伤害致死则跳过死亡亡语
+    （白球裂隙/强化绿爆炸分裂/复活等），仅计击杀——审判塔击杀目标时使用。
+    强化铁球替伤：非强化铁球受到伤害时，3 格半径内有存活的强化铁球则转由它承受；
+    铁球/强化铁球每秒最多承受 IRON_HITS_PER_SEC 次伤害。"""
+    # 强化铁球替伤：普通球/铁球（非强化铁球自身）受到伤害时，3 格半径内有强化铁球则转由它承受
+    if not _redirect_guard and m["type"] != "biron":
+        for sh in S.monsters:
+            if (sh["alive"] and sh["type"] == "biron" and sh is not m
+                    and dist2(sh, m) <= (IRON_SHIELD_R * CELL) ** 2):
+                return damage_monster(sh, dmg, no_death_effect, _redirect_guard=True)
+    # 铁球/强化铁球：每秒最多承受 IRON_HITS_PER_SEC 次伤害（无论单次伤害大小）
+    if MON_DEFS[m["type"]].get("iron_limit"):
+        if S.time - m.get("hit_window", 0.0) >= 1.0:
+            m["hit_window"] = S.time
+            m["hit_count"] = 0
+        if m.get("hit_count", 0) >= IRON_HITS_PER_SEC:
+            return False   # 本秒已受满 IRON_HITS_PER_SEC 次，本次免疫
+        m["hit_count"] = m.get("hit_count", 0) + 1
     # 强黑锥次数盾：每次被攻击消耗 1 层，盾在时免疫本次伤害（需 25 次攻击击破）
     if m.get("cshields", 0) > 0:
         m["cshields"] -= 1
@@ -703,25 +798,28 @@ def damage_monster(m, dmg):
     if m["hp"] <= 0 and m["alive"]:
         m["alive"] = False
         S.kills += 1
-        mtype = m["type"]
-        d = MON_DEFS[mtype]
-        # 白球死亡 → 生成裂隙出怪点
-        if d.get("spawner"):
-            spawn_wspawn(m["x"], m["y"])
-        # 强化绿死亡 → 爆炸 + 两个普通绿
-        if d.get("boom"):
-            _bgreen_explode(m)
-        # 复活逻辑
-        rev = d["revive"]
-        if rev == "random":
-            # 强化黄死亡：复活为随机强化球（强黑/强黄/强绿/强蓝/强红），不会变强化白
-            pool = [k for k in MON_KEYS
-                    if MON_DEFS[k].get("elite") and k != "bwhite"]
-            rev = random.choice(pool)
-        if rev:
-            rv = spawn_monster(rev, x=m["x"], y=m["y"], hp=m["maxhp"])
-            rv["bob"] = m["bob"]
-            S.monsters.append(rv)
+        if not no_death_effect:
+            mtype = m["type"]
+            d = MON_DEFS[mtype]
+            # 白球死亡 → 生成裂隙出怪点
+            if d.get("spawner"):
+                spawn_wspawn(m["x"], m["y"])
+            # 强化绿死亡 → 爆炸 + 两个普通绿
+            if d.get("boom"):
+                _bgreen_explode(m)
+            # 复活逻辑
+            rev = d["revive"]
+            if rev == "random":
+                # 强化黄死亡：复活为随机强化球（强黑/强黄/强绿/强蓝/强红），不会变强化白
+                # 也不含铁/强化铁/银（它们有独立出现机制，不在黄球复活池内）
+                pool = [k for k in MON_KEYS
+                        if MON_DEFS[k].get("elite")
+                        and k not in ("bwhite", "iron", "biron", "silver")]
+                rev = random.choice(pool)
+            if rev:
+                rv = spawn_monster(rev, x=m["x"], y=m["y"], hp=m["maxhp"])
+                rv["bob"] = m["bob"]
+                S.monsters.append(rv)
         return True
     return False
 
@@ -776,18 +874,20 @@ def update_radiations(dt):
                        color="#d4ff57", life=0.12)
     S.radiations = [rad for rad in S.radiations if rad["life"] > 0]
 
-def remove_tower(t):
+def remove_tower(t, no_explode=False):
     if not t.get("removed"):
         t["removed"] = True
         if t["kind"] == "core":
             # 基地血量归零 → 游戏失败
             game_over()
             return
-        # 爆破单元/迷你核弹被摧毁（怪物攻击打爆）时同样引爆
-        if t["kind"] == "boom_unit":
-            _boom_explode(t)
-        if t["kind"] == "mininuke":
-            _mininuke_explode(t)
+        # 爆破单元/迷你核弹被摧毁（怪物攻击打爆）时同样引爆；
+        # 起吊机安全移除时 no_explode=True，不引爆地雷塔
+        if not no_explode:
+            if t["kind"] == "boom_unit":
+                _boom_explode(t)
+            if t["kind"] == "mininuke":
+                _mininuke_explode(t)
         for dr in range(t["size"]):
             for dc in range(t["size"]):
                 rr, cc = t["r"] + dr, t["c"] + dc
@@ -798,6 +898,18 @@ def remove_tower(t):
             if _game is not None:
                 _game.redraw_static()
             log(f"{TOWER_DEFS.get(t['kind'], {}).get('name', '塔')} 被摧毁！", "warn")
+
+def crane_remove_tower(t):
+    """起吊机：安全移除一座塔（除基地），返还 30% 能量。
+    与普通摧毁不同，起吊机不会引爆地雷类塔（爆破单元/迷你核弹）。"""
+    if t.get("removed") or t["kind"] == "core":
+        return False
+    d = TOWER_DEFS.get(t["kind"], {})
+    refund = int(d.get("cost", 0) * 0.3)
+    remove_tower(t, no_explode=True)
+    S.energy = min(MAX_ENERGY, S.energy + refund)
+    log(f"🏗️ 起吊机移除 {d.get('name', '塔')}，返还 ⚡{refund}", "info")
+    return True
 
 # ============ 波次 ============
 def level_wave_units(n):
@@ -890,8 +1002,8 @@ def spawn_hundred_wave():
     units = level_wave_units(S.wave)
     count = max(3, (HUNDRED_BASE + units) // HUNDRED_DIV)
     edge_x = GRID * CELL - 4          # 贴右边界
-    # 恰好 1 金球 + 1 强化白球
-    S.monsters.append(spawn_monster("gold", x=edge_x, y=random.uniform(0, GRID * CELL)))
+    # 恰好 1 金球（可能伴生银球）+ 1 强化白球
+    spawn_gold_with_silver(x=edge_x, y=random.uniform(0, GRID * CELL))
     S.monsters.append(spawn_monster("bwhite", x=edge_x, y=random.uniform(0, GRID * CELL)))
     # 其余单位从出怪池随机（关卡模式用关卡出怪池，无尽用普通池；不占本波出怪权重）
     # 第 6 波起百球行中混入少量锥类（红/黑锥及强化锥）
@@ -919,7 +1031,7 @@ def start_wave(n):
         S.gold_pending = (n >= S.level.get("elite_white_gold_from", 99))
         if S.gold_pending:
             S.gold_pending = False
-            S.monsters.append(spawn_monster("gold"))
+            spawn_gold_with_silver()
             log("🟡 金·核心 来袭！", "warn")
         if n in S.level.get("hundred_waves", []):
             S.hundred_timer = HUNDRED_WARN_TIME
@@ -928,6 +1040,8 @@ def start_wave(n):
         # 无尽模式：白/强化白每波必出，金球每两波必出，百球行第 10 波起每 3 波
         S.white_pending = (n >= WHITE_MIN_WAVE)
         S.gold_pending = (n >= GOLD_MIN_WAVE and (n - GOLD_MIN_WAVE) % 2 == 0)
+        # 铁球/强化铁球：第 5 波起每波必出 1 只（机制与白球一致）
+        S.iron_pending = (n >= IRON_MIN_WAVE)
         # 第 6 波起：白锥/强化白锥每波必出 1 只；生成锥类刷怪点；刷怪上限上升
         S.wcone_pending = (n >= WCONE_MIN_WAVE)
         setup_cone_spawn()
@@ -935,7 +1049,7 @@ def start_wave(n):
             S.spawn["total"] += CONE_EXTRA_BUDGET   # 锥类占用共享上限，上限随之上升
         if S.gold_pending:
             S.gold_pending = False
-            S.monsters.append(spawn_monster("gold"))
+            spawn_gold_with_silver()
             log("🟡 金·核心 来袭！", "warn")
         if n >= HUNDRED_MIN_WAVE and (n - HUNDRED_MIN_WAVE) % HUNDRED_PERIOD == 0:
             S.hundred_timer = HUNDRED_WARN_TIME
@@ -1067,14 +1181,12 @@ def monster_update(m, dt):
     if d.get("cone"):
         m["spin"] = m.get("spin", 0.0) + dt * 7.0
 
-    # 白锥/强化白锥：不移动、不攻击，仅持续自扣血（召唤逻辑在 update 中处理）
+    # 白锥/强化白锥：不移动、不攻击，仅持续自扣血（召唤逻辑在 update 中处理）。
+    # 掉血速度改为按最大生命比例，约 30 秒后自然消散（支撑其在场 30s）。
     if d.get("summoner"):
-        m["drain_t"] = m.get("drain_t", 0.0) + dt
-        if m["drain_t"] >= 1.0:
-            m["drain_t"] -= 1.0
-            m["hp"] -= WCONE_DRAIN
-            if m["hp"] <= 0:
-                damage_monster(m, 0)   # 触发死亡逻辑（自扣血致死）
+        m["hp"] -= m["maxhp"] / WCONE_LIFE_TIME * dt
+        if m["hp"] <= 0:
+            damage_monster(m, 0)   # 触发死亡逻辑（自扣血致死）
         return
 
     # 黑色球/黑锥（含强化）：闪现到 10×10 格内最近塔（覆盖当前目标）
@@ -1147,6 +1259,34 @@ def monster_update(m, dt):
         # 黑锥/强化黑锥：接触攻击时对目标塔施加沉默
         if d.get("silence"):
             _apply_cone_silence(m, target)
+        # 护卫球：首次攻击冲撞塔（一次性大量伤害），并在附近生成 1~3 只强化红球
+        if MON_DEFS[m["type"]].get("guard") and not m.get("guard_rammed"):
+            m["guard_rammed"] = True
+            dmg = GUARD_RAM_DMG
+            sh = target.get("shield", 0)
+            if sh > 0:
+                use = min(sh, dmg); target["shield"] = sh - use; dmg -= use
+            if target["kind"] == "core":
+                target["hp_frac"] = target.get("hp_frac", 0.0) + dmg
+                whole = int(target["hp_frac"]); target["hp_frac"] -= whole
+                target["hp"] -= whole
+                if target["hp"] <= 0:
+                    game_over(); m["target"] = None
+            else:
+                target["hp"] -= dmg
+                if target["hp"] <= 0:
+                    remove_tower(target); m["target"] = None
+            add_effect("boom", m["x"], m["y"], r=m["r"] * 2.2, color="#ff5555",
+                       life=0.35)
+            # 附近生成 1~3 只强化红球
+            n = random.randint(GUARD_SUMMON_MIN, GUARD_SUMMON_MAX)
+            for _ in range(n):
+                bred = spawn_monster("bred",
+                                     x=m["x"] + random.uniform(-14, 14),
+                                     y=m["y"] + random.uniform(-14, 14))
+                S.monsters.append(bred)
+            log(f"⚔ 护卫球冲撞！生成 {n} 只强化红球！", "warn")
+            return
         # 强化红（撞塔型）：每次冲撞造成一次性大量伤害，带冷却
         if MON_DEFS[m["type"]].get("ram"):
             m.setdefault("ram_cd", 0.0)
@@ -1204,6 +1344,9 @@ def monster_update(m, dt):
             eff_speed *= 0.0
         elif m["slow"] > 0:
             eff_speed *= LIQUID_SLOW
+        # 护卫球：靠近塔时移速大幅加快
+        if MON_DEFS[m["type"]].get("guard") and dist <= GUARD_BOOST_RANGE:
+            eff_speed *= GUARD_SPEED_BOOST
         step = eff_speed * CELL * dt
         if dist <= step:
             m["x"], m["y"] = target["x"], target["y"]
@@ -1246,6 +1389,13 @@ def update(dt):
             elif S.wcone_pending:
                 S.wcone_pending = False
                 k = "bconew" if random.random() < WCONE_ELITE_CHANCE else "wcone"
+            # 铁球/强化铁球：每波必出 1 只（第 5 波起，无尽模式；第 8 波后必定强化）
+            elif S.iron_pending:
+                S.iron_pending = False
+                if S.wave > IRON_ALWAYS_ELITE_WAVE:
+                    k = "biron"
+                else:
+                    k = "biron" if random.random() < IRON_ELITE_CHANCE else "iron"
             else:
                 # 关卡模式用关卡出怪池（红/蓝/黑带强化形态），无尽用普通池
                 k = level_mon_key(S.wave) if S.mode == "level" else random_mon_key(S.wave)
@@ -1309,16 +1459,42 @@ def update(dt):
             S.bullets.append({"x": t["x"], "y": t["y"], "target": target,
                               "life": BULLET_LIFE, "from": t})
 
-    # 4.4 防御矩阵血量叠加：场上矩阵越多，所有矩阵血量上限越高
+    # 4.4 防御矩阵血量叠加：场上矩阵越多，所有矩阵基础生命上限越高
+    # （最终上限由 4.45 医疗塔加成在 base_maxhp 上叠加计算）
     n_matrix = sum(1 for t in S.towers if t["kind"] == "matrix" and not t.get("removed"))
     if n_matrix:
         matrix_maxhp = MATRIX_BASE_HP + (n_matrix - 1) * MATRIX_HP_PER_MATRIX
         for t in S.towers:
             if t["kind"] == "matrix" and not t.get("removed"):
-                if t["maxhp"] != matrix_maxhp:
-                    delta = matrix_maxhp - t["maxhp"]
-                    t["maxhp"] = matrix_maxhp
-                    t["hp"] = min(matrix_maxhp, t["hp"] + delta)
+                t["base_maxhp"] = matrix_maxhp
+
+    # 4.45 医疗塔：提升范围内塔 150% 生命上限 + 每秒 5% 百分比回血
+    for t in S.towers:
+        # 兼容手动/旧创建的无 base_maxhp 塔：以其当前 maxhp 作为基础上限
+        if "base_maxhp" not in t:
+            t["base_maxhp"] = t["maxhp"]
+        t["heal_bonus"] = 0.0
+    for h in S.towers:
+        if h.get("removed") or h["kind"] != "healer":
+            continue
+        R = h.get("range", 4 * CELL)
+        for t in S.towers:
+            if t.get("removed") or t is h:
+                continue
+            if dist2(h, t) <= R * R:
+                # 提升 150% 生命上限（基于该塔当前基础上限）
+                t["heal_bonus"] = max(t["heal_bonus"],
+                                      t["base_maxhp"] * HEAL_MAXHP_BONUS)
+    for t in S.towers:
+        if t.get("removed"):
+            continue
+        new_max = t["base_maxhp"] + t.get("heal_bonus", 0.0)
+        if t["maxhp"] != new_max:
+            t["maxhp"] = new_max
+            t["hp"] = min(t["maxhp"], t["hp"])   # 上限提升不补血，靠百分比回血
+        # 百分比回血：每秒 5%（按当前最大生命），仅范围内（有加成）的塔生效
+        if t.get("heal_bonus", 0.0) > 0 and t["hp"] < t["maxhp"]:
+            t["hp"] = min(t["maxhp"], t["hp"] + t["maxhp"] * HEAL_PCT_RATE * dt)
 
     # 4.45 液氮塔减速增益：4 格范围内友方攻击塔，其攻击均减速目标
     for t in S.towers:
@@ -1330,7 +1506,7 @@ def update(dt):
         for t in S.towers:
             if t.get("removed") or t["kind"] == "core":
                 continue
-            if t["kind"] in ("gun", "prism", "missile", "flamer", "silode", "liquid") \
+            if t["kind"] in ("gun", "prism", "judge", "missile", "flamer", "silode", "liquid") \
                     and dist2(t, lt) <= R * R:
                 t["frost"] = True
 
@@ -1339,8 +1515,8 @@ def update(dt):
         if t.get("removed"):
             continue
         k = t["kind"]
-        # 被沉默的攻击塔（光棱/导弹/液氮/喷火器/发射井）无法攻击
-        if t.get("silence_t", 0) > 0 and k in ("prism", "missile", "liquid", "flamer", "silode"):
+        # 被沉默的攻击塔（光棱/审判/导弹/液氮/喷火器/发射井）无法攻击
+        if t.get("silence_t", 0) > 0 and k in ("prism", "judge", "missile", "liquid", "flamer", "silode"):
             continue
         # 爆破单元：被怪物触碰即爆炸（一次性），造成 1.5×红血量范围伤害
         if k == "boom_unit":
@@ -1395,6 +1571,60 @@ def update(dt):
                                       "x2": lm["x"], "y2": lm["y"],
                                       "r": 0, "color": "#d2a8ff",
                                       "life": 0.15, "maxlife": 0.15, "t": 0.0})
+            continue
+        # 审判塔：地狱塔式蓄力光束，锁定单一目标持续攻击（3帧一次伤）。
+        # 伤害随攻击同一目标的累计时间线性增长，约3秒达最大(15倍机枪DPS)；
+        # 聚焦塔缩短蓄力时间；转火重置伤害但无真空期；击杀触发爆炸且不触发亡语。
+        if k == "judge":
+            t["cool"] -= dt
+            # 蓄力时间：每个聚焦塔 ×0.7
+            ramp = JUDGE_RAMP_TIME * (JUDGE_FOCUS_RAMP_FACTOR ** t.get("focuses", 0))
+            # 清理已死亡/离开射程的锁定目标
+            locks = []
+            for lm in t.get("locks", []):
+                if lm.get("alive") and dist2(t, lm) <= t["range"] ** 2:
+                    locks.append(lm)
+            t["locks"] = locks
+            # 锁定 1 个目标：转火时重置蓄力进度（无真空期，下帧立即攻击）
+            if len(t["locks"]) < 1:
+                cand = [m for m in S.monsters
+                        if m["alive"] and dist2(t, m) <= t["range"] ** 2]
+                if cand:
+                    cand.sort(key=lambda m: m["x"])   # 取最靠左（最接近基地）
+                    t["locks"].append(cand[0])
+                    t["judge_t"] = 0.0
+            if t["cool"] <= 0 and t["locks"]:
+                t["cool"] = JUDGE_COOLDOWN
+                lm = t["locks"][0]
+                t["judge_t"] = min(t["judge_t"] + dt, ramp)
+                frac = (t["judge_t"] / ramp) if ramp > 0 else 1.0
+                dmg = JUDGE_MIN_DMG + (JUDGE_MAX_DMG - JUDGE_MIN_DMG) * frac
+                # 液氮塔增益：审判塔攻击减速目标
+                if t.get("frost"):
+                    lm["slow"] = max(lm["slow"], LIQUID_SLOW_TIME)
+                # 光束特效（伤害越高越亮）
+                glow = min(1.0, frac)
+                col = "#ff5a5a"
+                S.effects.append({"type": "beam", "x": t["x"], "y": t["y"],
+                                  "x2": lm["x"], "y2": lm["y"], "r": 0,
+                                  "color": col, "life": 0.15, "maxlife": 0.15,
+                                  "t": 0.0, "extra": {"w": 1 + glow * 3}})
+                # 攻击（击杀目标时不触发亡语，转由下方爆炸逻辑处理）
+                killed = damage_monster(lm, dmg, no_death_effect=True)
+                if killed:
+                    # 击杀爆炸：目标最大生命 15%（至少一红），范围 2 格
+                    red_hp = wave_hp(S.wave) * MON_DEFS["red"]["hp_mult"]
+                    boom_dmg = max(JUDGE_EXPLODE_PCT * lm["maxhp"], red_hp)
+                    R = JUDGE_EXPLODE_R
+                    for mm in S.monsters:
+                        if mm["alive"] and mm is not lm and dist2(mm, t) <= R * R:
+                            damage_monster(mm, boom_dmg)
+                    add_effect("boom", lm["x"], lm["y"], r=R,
+                               color="#ff5a5a", life=0.6)
+                    add_effect("range", lm["x"], lm["y"], r=R,
+                               color="#ff8f8f", life=0.5)
+                    log(f"⚖️ 审判塔处决！爆炸 {boom_dmg:.0f} 伤害 (2格)", "warn")
+                    t["judge_t"] = 0.0   # 目标已死，转火重置
             continue
         # 导弹塔：发射追踪导弹（超大射程），命中或超时爆炸
         if k == "missile":
@@ -1470,16 +1700,8 @@ def update(dt):
                                        "target": {"alive": True, "x": lx, "y": ly},
                                        "lock": 999.0, "is_silo": True, "from": t})
             continue
-        # 治疗塔：治疗范围内塔 + 套盾
+        # 治疗塔：不在此处理（其提升生命上限 + 百分比回血逻辑在 4.45 节统一计算）
         if k == "healer":
-            for tt in S.towers:
-                if tt.get("removed") or tt is t:
-                    continue
-                if dist2(t, tt) <= t["range"] ** 2:
-                    if tt["hp"] < tt["maxhp"]:
-                        tt["hp"] = min(tt["maxhp"], tt["hp"] + HEAL_RATE * dt)
-                    if tt.get("shield", 0) < HEAL_SHIELD:
-                        tt["shield"] = HEAL_SHIELD
             continue
 
     # 4.6 导弹飞行与爆炸
@@ -1576,6 +1798,8 @@ def update(dt):
         for other in S.monsters:
             if other is m or not other["alive"]:
                 continue
+            if other["type"] == "bwhite":
+                continue   # 强化白不受强化蓝加速光环影响（速度已降为1/2）
             if dist2(other, m) <= R * R:
                 other["boosted"] = True
                 other["boost_speed"] = m["speed"]   # 提升至与强化蓝自身移速一致
@@ -1587,9 +1811,10 @@ def update(dt):
     wcone_pool = [k for k in MON_KEYS
                   if k not in ("white", "bwhite", "gold", "wcone", "bconew")
                   and not MON_DEFS[k].get("elite")]
-    # 强化白锥召唤池：强化球类（不含强白）+ 强化锥类（不含强白锥）
+    # 强化白锥召唤池：强化球类（不含强白/铁/强化铁/银）+ 强化锥类（不含强白锥）
     bwcone_pool = [k for k in MON_KEYS
-                   if MON_DEFS[k].get("elite") and k not in ("bwhite", "bconew")]
+                   if MON_DEFS[k].get("elite")
+                   and k not in ("bwhite", "bconew", "iron", "biron", "silver")]
     for m in list(S.monsters):
         if not m["alive"]:
             continue
@@ -1700,9 +1925,11 @@ def reset_state():
     S.wspawns = []
     S.white_pending = False
     S.gold_pending = False
+    S.iron_pending = False
     S.wcone_pending = False
     S.conespawn = None
     S.silo_locking = None
+    S.crane_mode = False
     S.hundred_timer = 0.0
     S.energy_cd = 0.0
     S.ispawn = None
@@ -1738,13 +1965,39 @@ class Game:
             S.energy = S.level.get("start_energy", START_ENERGY)
         root.title(f"🎯 {S.level['name']}" if S.mode == "level" else "🏰 无尽塔防")
         root.configure(bg="#0d1117")
-        self.canvas = tk.Canvas(root, width=CANVAS_W, height=W, bg="#1b2838",
+
+        # ===== 顶部槽位卡片栏（PVZ 风格，默认屏幕上方，可切换回右侧面板） =====
+        self.slot_mode = "top"     # 槽位位置：top 顶部卡片 / panel 右侧面板
+        self.slot_top = tk.Frame(root, bg="#0d1117")
+        self.slot_top.pack(side="top", fill="x", padx=8, pady=(8, 0))
+        self.slot_frame = tk.Frame(self.slot_top, bg="#0d1117")
+        self.slot_frame.pack(side="left")
+        # 顶部栏右侧：槽位位置切换 + 起吊机按钮
+        ctrl = tk.Frame(self.slot_top, bg="#0d1117")
+        ctrl.pack(side="right", padx=4)
+        self.slot_toggle_btn = tk.Button(ctrl, text="⇅ 槽位移到右侧", bg="#30363d",
+                                         fg="#e6edf3", relief="flat",
+                                         font=("Microsoft YaHei", 9),
+                                         command=self.toggle_slot_mode)
+        self.slot_toggle_btn.pack(side="left", padx=3)
+        self.crane_btn = tk.Button(ctrl, text="🏗️ 起吊机(F1)", bg="#30363d",
+                                   fg="#e6edf3", relief="flat",
+                                   font=("Microsoft YaHei", 9),
+                                   command=self.toggle_crane)
+        self.crane_btn.pack(side="left", padx=3)
+
+        # ===== 主区域：画布(左) + 右侧信息栏 =====
+        main = tk.Frame(root, bg="#0d1117")
+        main.pack(side="top", fill="both", expand=True)
+
+        self.canvas = tk.Canvas(main, width=CANVAS_W, height=W, bg="#1b2838",
                                 highlightthickness=0)
         self.canvas.pack(side="left", padx=(8, 0), pady=8)
 
-        panel = tk.Frame(root, bg="#161b22", width=PANEL_W)
+        panel = tk.Frame(main, bg="#161b22", width=PANEL_W)
         panel.pack(side="left", fill="y", padx=8, pady=8)
         panel.pack_propagate(False)
+        self.panel = panel
 
         title_text = f"🎯 {S.level['name']}" if S.mode == "level" else "🏰 无尽塔防"
         tk.Label(panel, text=title_text, bg="#161b22", fg="#58a6ff",
@@ -1768,21 +2021,22 @@ class Game:
         self.bar_fill = self.bar.create_rectangle(0, 0, 0, 10, fill="#58a6ff",
                                                   outline="")
 
-        tk.Label(panel, text="── 槽位(按 1-9) ──", bg="#161b22", fg="#8b949e",
-                 font=("Microsoft YaHei", 10)).pack(pady=(10, 4))
-
+        # 槽位容器：右侧面板模式时按钮放这里
+        self.panel_slot_frame = tk.Frame(panel, bg="#161b22")
+        # 槽位按钮（顶部卡片 / 右侧面板共用，可切换位置）。
+        # 父容器设为 root，使其可 pack 到 slot_frame 或 panel_slot_frame 任一处。
         self.tool_btns = {}
         for idx, kind in enumerate(self.tower_list):
             d = TOWER_DEFS[kind]
-            b = tk.Button(panel, text=f"{idx+1}·{d['name']}  ⚡{d['cost']}",
+            hotkey = self._hotkey(idx)
+            b = tk.Button(root, text=f"{hotkey} {d['name']} ⚡{d['cost']}",
                           bg="#21262d", fg="#e6edf3", activebackground="#0d2a4a",
-                          relief="flat", font=("Microsoft YaHei", 10),
+                          relief="flat", font=("Microsoft YaHei", 9),
                           command=lambda k=kind: self.toggle_tool(k))
-            b.pack(fill="x", pady=2, padx=10)
             self.tool_btns[kind] = b
-
-        tk.Label(panel, text="点格子放置 · 右键取消 · 1-9选塔",
-                 bg="#161b22", fg="#8b949e", font=("Microsoft YaHei", 9)).pack(pady=(8, 2))
+        self.slot_hint = tk.Label(panel, bg="#161b22", fg="#8b949e",
+                                  font=("Microsoft YaHei", 9))
+        self._repack_slots()
 
         self.pause_btn = tk.Button(panel, text="⏸ 暂停", bg="#1f6feb", fg="#fff",
                                    relief="flat", font=("Microsoft YaHei", 10),
@@ -1805,15 +2059,22 @@ class Game:
         self.canvas.bind("<Button-3>", self.on_right)
         self.root.bind("<space>", lambda e: self.toggle_pause())
         self.root.bind("<Escape>", lambda e: self.set_tool(None))
-        # 快捷键 1-9 对应槽位
+        # 快捷键：1-9 对应前 9 个槽位，0 对应第 10 个槽位
         for i, kind in enumerate(self.tower_list):
-            self.root.bind(str(i + 1),
-                           lambda e, k=kind: self.set_tool(None if S.sel == k else k))
+            if i == 9:
+                self.root.bind("0",
+                               lambda e, k=kind: self.set_tool(None if S.sel == k else k))
+            else:
+                self.root.bind(str(i + 1),
+                               lambda e, k=kind: self.set_tool(None if S.sel == k else k))
+        # F1：起吊机（移除一座塔返还30%能量）
+        self.root.bind("<F1>", lambda e: self.toggle_crane())
 
         core = {"kind": "core", "c": CORE_C, "r": CORE_R,
                 "size": CORE_DEF["size"], "x": (CORE_C + 1) * CELL,
                 "y": (CORE_R + 1) * CELL, "hp": CORE_DEF["hp"],
-                "maxhp": CORE_DEF["hp"], "hp_frac": 0.0}
+                "maxhp": CORE_DEF["hp"], "base_maxhp": CORE_DEF["hp"],
+                "hp_frac": 0.0}
         S.towers.append(core)
 
         # 关卡模式：生成独立强化黑刷怪点（需在 msg_box 创建之后，否则 log 崩溃）
@@ -1892,7 +2153,8 @@ class Game:
         icon = {"solar": "☀", "gun": "🔫", "taunt": "❗",
                 "boom_unit": "💣", "prism": "🔆", "missile": "🚀",
                 "liquid": "🧊", "healer": "⛑", "energy": "⚡",
-                "mininuke": "☢️", "flamer": "🔥", "silode": "🛰️", "matrix": "🛡"}.get(t["kind"], "?")
+                "mininuke": "☢️", "flamer": "🔥", "silode": "🛰️", "matrix": "🛡",
+                "judge": "⚖️"}.get(t["kind"], "?")
         self.canvas.create_text(x, y, text=icon, fill="#111",
                                 font=("Segoe UI Emoji", int(size * CELL * 0.5)),
                                 tags="tower")
@@ -1907,8 +2169,8 @@ class Game:
                                         outline="#7a5a10", width=1, tags="tower")
                 self.canvas.create_oval(gx - 2, gy - 2, gx + 2, gy + 2,
                                         fill="#5c3d0e", outline="", tags="tower")
-        # 光棱塔：叠加聚焦塔标记（紫色小点），并显示锁定目标数
-        if t["kind"] == "prism":
+        # 光棱塔/审判塔：叠加聚焦塔标记（紫色小点）
+        if t["kind"] in ("prism", "judge"):
             nf = t.get("focuses", 0)
             for k in range(nf):
                 fx = x - 12 + k * 12
@@ -1916,6 +2178,12 @@ class Game:
                 self.canvas.create_oval(fx - 4, fy - 4, fx + 4, fy + 4,
                                         fill=TOWER_DEFS["focus"]["color"],
                                         outline="#7a5ad0", width=1, tags="tower")
+        # 审判塔：显示 6 格射程圈
+        if t["kind"] == "judge":
+            self.canvas.create_oval(x - JUDGE_RANGE, y - JUDGE_RANGE,
+                                    x + JUDGE_RANGE, y + JUDGE_RANGE,
+                                    outline="#5c1a1a", width=1, dash=(4, 3),
+                                    tags="tower")
         # 嘲讽塔显示 5 格嘲讽圈
         if t["kind"] == "taunt":
             self.canvas.create_oval(x - TAUNT_RANGE, y - TAUNT_RANGE,
@@ -1991,9 +2259,18 @@ class Game:
                                         outline=ef["color"], width=2,
                                         dash=(5, 4), tags="dyn")
             elif ef["type"] == "beam":
-                # 光棱塔激光线（x,y → x2,y2）
-                self.canvas.create_line(ef["x"], ef["y"], ef["x2"], ef["y2"],
-                                        fill="#d2a8ff", width=2, tags="dyn")
+                # 光棱塔/审判塔激光线（x,y → x2,y2）
+                if "extra" in ef and "w" in ef["extra"]:
+                    # 审判塔光束：伤害越高越宽越亮
+                    w = ef["extra"]["w"]
+                    self.canvas.create_line(ef["x"], ef["y"], ef["x2"], ef["y2"],
+                                            fill="#ff8f8f", width=w + 3, tags="dyn")
+                    self.canvas.create_line(ef["x"], ef["y"], ef["x2"], ef["y2"],
+                                            fill=ef["color"], width=w, tags="dyn")
+                else:
+                    # 光棱塔激光线
+                    self.canvas.create_line(ef["x"], ef["y"], ef["x2"], ef["y2"],
+                                            fill="#d2a8ff", width=2, tags="dyn")
             elif ef["type"] == "flame":
                 # 喷火器锥形火焰：从塔口向喷射方向喷出的多层扇形火焰（真实感）
                 aim = ef["extra"]["aim"]; half = ef["extra"]["half"]
@@ -2162,6 +2439,39 @@ class Game:
                 self.canvas.create_polygon(fx, fy, fx + 10, fy + 4, fx, fy + 8,
                                            fill="#58a6ff", outline="",
                                            tags="dyn")
+            # 铁球/强化铁球：钢质高光（左上亮斑），强化铁球外圈盾环（替伤）
+            if d.get("iron_limit"):
+                self.canvas.create_oval(m["x"] - m["r"] * 0.5, yy - m["r"] * 0.6,
+                                        m["x"] - m["r"] * 0.1, yy - m["r"] * 0.2,
+                                        fill="#ffffff", outline="", tags="dyn")
+            if d.get("shield_ally"):
+                self.canvas.create_oval(m["x"] - m["r"] - 3, yy - m["r"] - 3,
+                                        m["x"] + m["r"] + 3, yy + m["r"] + 3,
+                                        outline="#9aa0a8", width=2, tags="dyn")
+            # 银球：头顶召唤星标（与强化白区分，提示其拥有召唤+裂隙功能）
+            if m["type"] == "silver":
+                self.canvas.create_text(m["x"], yy - m["r"] - 16, text="✨",
+                                        fill="#e6edf3", font=("Segoe UI Emoji", 9),
+                                        tags="dyn")
+            # 护卫球：头顶铁盔 + 身携铁剑（红球、铁色顶部）
+            if m["type"] == "guard":
+                rr = m["r"]
+                # 铁盔：球体顶部的铁色半圆帽
+                self.canvas.create_arc(m["x"] - rr * 0.75, yy - rr - 4,
+                                       m["x"] + rr * 0.75, yy + rr * 0.4,
+                                       start=180, extent=180, fill="#5c6370",
+                                       outline="#2b2f36", tags="dyn")
+                # 铁盔尖顶
+                self.canvas.create_line(m["x"], yy - rr - 4, m["x"], yy - rr - 9,
+                                        fill="#5c6370", width=2, tags="dyn")
+                # 铁剑：斜持于球体右侧
+                bx, by = m["x"] + rr * 0.55, yy + rr * 0.15   # 持剑手位置
+                ex, ey = bx + rr * 0.95, by + rr * 1.15       # 剑尖
+                self.canvas.create_line(bx, by, ex, ey, fill="#e6edf3", width=3,
+                                        tags="dyn")
+                # 护手(十字)
+                self.canvas.create_line(bx - 4, by - 4, bx + 4, by + 4,
+                                        fill="#8d9199", width=2, tags="dyn")
             # 冰冻/减速状态指示（浅蓝圆环/小冰晶）
             if m["frozen"] > 0:
                 self.canvas.create_oval(m["x"] - m["r"] - 3, yy - m["r"] - 3,
@@ -2226,6 +2536,20 @@ class Game:
         return e.x // CELL, e.y // CELL
 
     def on_click(self, e):
+        # 起吊机模式：左键点击一座塔（除基地）将其移除并返还30%能量
+        if S.crane_mode and not S.over:
+            c, r = self.cell_at(e)
+            if 0 <= c < GRID and 0 <= r < GRID:
+                for t in S.towers:
+                    if t.get("removed"):
+                        continue
+                    if t["c"] <= c < t["c"] + t["size"] and t["r"] <= r < t["r"] + t["size"]:
+                        if t["kind"] == "core":
+                            log("主基地无法移除！", "warn")
+                            break
+                        crane_remove_tower(t)
+                        break
+            return
         # 发射井锁定模式：左键选择目标点
         if S.silo_locking is not None:
             silo = S.silo_locking
@@ -2266,7 +2590,54 @@ class Game:
 
     def set_tool(self, kind):
         S.sel = kind
+        # 选中塔时退出起吊机模式
+        if kind is not None and S.crane_mode:
+            S.crane_mode = False
+            self.crane_btn.config(bg="#30363d", fg="#e6edf3", text="🏗️ 起吊机(F1)")
         self.refresh_tools()
+
+    def _hotkey(self, idx):
+        """槽位快捷键显示：第 10 个（索引9）用 0，其余用 1-9"""
+        return "0" if idx == 9 else str(idx + 1)
+
+    def toggle_slot_mode(self):
+        """切换槽位位置：屏幕上方卡片 ⇄ 右侧面板"""
+        self.slot_mode = "panel" if self.slot_mode == "top" else "top"
+        self._repack_slots()
+
+    def _repack_slots(self):
+        """根据 self.slot_mode 把槽位按钮重新布置到顶部卡片栏或右侧面板"""
+        for b in self.tool_btns.values():
+            b.pack_forget()
+        self.slot_frame.pack_forget()
+        self.panel_slot_frame.pack_forget()
+        if self.slot_mode == "top":
+            self.slot_frame.pack(side="left")
+            for idx, (kind, b) in enumerate(self.tool_btns.items()):
+                b.config(font=("Microsoft YaHei", 9), width=8, height=1)
+                b.pack(in_=self.slot_frame, side="left", padx=3, pady=3)
+            self.slot_hint.config(
+                text="点格子放置 · 右键取消 · 1-9 / 0 选塔 · 🏗️F1 起吊机")
+        else:
+            self.panel_slot_frame.pack(fill="x", pady=2)
+            for idx, (kind, b) in enumerate(self.tool_btns.items()):
+                b.config(font=("Microsoft YaHei", 10), width=0, height=0)
+                b.pack(in_=self.panel_slot_frame, fill="x", pady=2, padx=10)
+            self.slot_hint.config(text="点格子放置 · 右键取消 · 1-9 / 0 选塔")
+        self.slot_toggle_btn.config(
+            text="⇅ 槽位移到右侧" if self.slot_mode == "top" else "⇅ 槽位移到上方")
+
+    def toggle_crane(self):
+        """起吊机：切换模式，开启后点击场上塔移除并返还 30% 能量"""
+        S.crane_mode = not S.crane_mode
+        if S.crane_mode:
+            self.set_tool(None)
+            self.crane_btn.config(bg="#e3b341", fg="#111",
+                                  text="🏗️ 起吊机: 点击塔移除(F1)")
+            log("🏗️ 起吊机启动：点击场上任意塔移除并返还30%能量（F1 关闭）", "warn")
+        else:
+            self.crane_btn.config(bg="#30363d", fg="#e6edf3", text="🏗️ 起吊机(F1)")
+            log("🏗️ 起吊机关闭", "info")
 
     def toggle_pause(self):
         S.paused = not S.paused
@@ -2277,15 +2648,21 @@ class Game:
             d = TOWER_DEFS[kind]
             aff = S.energy < d["cost"]
             sel = S.sel == kind
+            hk = self._hotkey(self.tower_list.index(kind))
             # 电能包：冷却中禁用并显示剩余秒数
             if kind == "energy" and S.energy_cd > 0:
-                b.config(text=f"{self.tower_list.index(kind)+1}·电能包 ⚡ {S.energy_cd:.0f}s",
+                b.config(text=f"{hk} 电能包 ⚡ {S.energy_cd:.0f}s",
                          state="disabled", bg="#21262d")
                 continue
             if kind == "energy":
-                b.config(text=f"{self.tower_list.index(kind)+1}·电能包  ⚡{d['cost']}")
+                b.config(text=f"{hk} 电能包 ⚡{d['cost']}")
             b.config(bg="#0d2a4a" if sel else "#21262d",
                      state="disabled" if aff and not sel else "normal")
+            # 顶部卡片模式：用塔颜色区分卡片（PVZ 风格）
+            if self.slot_mode == "top":
+                b.config(bg="#0d2a4a" if sel else d["color"],
+                         fg="#111" if (not aff or sel) else "#666",
+                         activebackground="#0d2a4a")
 
     # ---------- HUD ----------
     def update_hud(self):
@@ -2396,10 +2773,10 @@ class App:
         root.configure(bg="#0d1117")
         top = tk.Frame(root, bg="#0d1117")
         top.pack(fill="x", padx=20, pady=10)
-        tk.Label(top, text="选择 9 种炮台", bg="#0d1117", fg="#58a6ff",
+        tk.Label(top, text=f"选择 {CARD_SELECT} 种炮台", bg="#0d1117", fg="#58a6ff",
                  font=("Microsoft YaHei", 16, "bold")).pack(side="left")
-        self.card_cnt = tk.Label(top, text="已选 0/9", bg="#0d1117", fg="#f0d94a",
-                                 font=("Microsoft YaHei", 12, "bold"))
+        self.card_cnt = tk.Label(top, text=f"已选 0/{CARD_SELECT}", bg="#0d1117",
+                                 fg="#f0d94a", font=("Microsoft YaHei", 12, "bold"))
         self.card_cnt.pack(side="right")
 
         grid = tk.Frame(root, bg="#161b22")
@@ -2430,17 +2807,17 @@ class App:
         if kind in self.selected:
             self.selected.remove(kind)
         else:
-            if len(self.selected) >= 9:
+            if len(self.selected) >= CARD_SELECT:
                 return
             self.selected.append(kind)
         # 刷新高亮
         for k, b in self.card_btns.items():
             b.config(bg="#0d2a4a" if k in self.selected else "#21262d")
-        self.card_cnt.config(text=f"已选 {len(self.selected)}/9")
-        self.start_btn.config(state="normal" if len(self.selected) == 9 else "disabled")
+        self.card_cnt.config(text=f"已选 {len(self.selected)}/{CARD_SELECT}")
+        self.start_btn.config(state="normal" if len(self.selected) == CARD_SELECT else "disabled")
 
     def do_start(self):
-        if len(self.selected) == 9:
+        if len(self.selected) == CARD_SELECT:
             self.show_game(list(self.selected))
 
     def show_game(self, tower_list):
