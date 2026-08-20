@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>无尽塔防</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0d1117; color:#e6edf3; font-family:"Microsoft YaHei", sans-serif;
+    display:flex; justify-content:center; padding:16px; min-height:100vh;
+  }
+  #wrap { display:flex; gap:16px; }
+  canvas { border:1px solid #30363d; border-radius:8px; background:#1b2838; }
+  #panel { width:250px; }
+  h1 { font-size:20px; margin-bottom:6px; color:#58a6ff; }
+  #stats { background:#161b22; border:1px solid #30363d; border-radius:8px; padding:12px; margin-bottom:12px; }
+  #stats div { display:flex; justify-content:space-between; margin:3px 0; }
+  .label { color:#8b949e; }
+  .bar { height:8px; background:#21262d; border-radius:4px; overflow:hidden; margin-top:4px; }
+  .bar > div { height:100%; background:#58a6ff; width:0%; transition:width .2s; }
+  #toolbar { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .tool {
+    display:flex; align-items:center; gap:10px; padding:10px 12px; background:#161b22;
+    border:1px solid #30363d; border-radius:8px; cursor:pointer; transition:all .15s;
+  }
+  .tool:hover { background:#1f2937; }
+  .tool.sel { border-color:#58a6ff; background:#0d2a4a; box-shadow:0 0 0 1px #58a6ff; }
+  .tool .icon { width:34px; height:34px; border-radius:6px; flex-shrink:0; position:relative; }
+  .tool .info { flex:1; }
+  .tool .info b { display:block; font-size:14px; }
+  .tool .info span { font-size:12px; color:#8b949e; }
+  .cost { color:#f0883e; font-weight:bold; }
+  .tool.disabled { opacity:.4; cursor:not-allowed; }
+  #msg {
+    background:#161b22; border:1px solid #30363d; border-radius:8px; padding:10px; font-size:13px;
+    color:#8b949e; height:70px; overflow-y:auto;
+  }
+  #msg .warn { color:#f85149; }
+  #msg .info { color:#3fb950; }
+  button { background:#238636; color:#fff; border:none; border-radius:6px; padding:10px; cursor:pointer; font-size:14px; margin-top:12px; width:100%; }
+  button:hover { background:#2ea043; }
+  #gameover { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); align-items:center; justify-content:center; z-index:10; }
+  #gameover .box { background:#161b22; border:1px solid #f85149; border-radius:12px; padding:30px 40px; text-align:center; }
+  #gameover h2 { color:#f85149; margin-bottom:10px; }
+  #hint { font-size:12px; color:#8b949e; margin-top:8px; }
+  .t-icon { width:100%; height:100%; border-radius:6px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1010" height="960"></canvas>
+  <div id="panel">
+    <h1>🏰 无尽塔防</h1>
+    <div id="stats">
+      <div><span class="label">波数</span><span id="st-wave">1</span></div>
+      <div><span class="label">能量</span><span id="st-energy">100</span></div>
+      <div><span class="label">场上怪</span><span id="st-mon">0</span></div>
+      <div><span class="label">基地血量</span><span id="st-hp">300</span></div>
+      <div><span class="label">本波出怪</span><span id="st-prog">0/0</span></div>
+      <div class="bar"><div id="bar-prog"></div></div>
+      <div><span class="label">下波剩余权重</span><span id="st-next">-</span></div>
+    </div>
+    <div id="toolbar"></div>
+    <button id="btn-slow">⏸ 暂停 (空格)</button>
+    <div id="msg"></div>
+    <div id="hint">1/2 选塔 · 空格暂停 · Esc取消 · 点击绿格放置</div>
+  </div>
+</div>
+<div id="gameover">
+  <div class="box">
+    <h2>💀 基地被摧毁</h2>
+    <p>你坚守到了第 <b id="go-wave">1</b> 波，击杀 <b id="go-kill">0</b> 只怪物。</p>
+    <button id="btn-restart">重新开始</button>
+  </div>
+</div>
+
+<script>
+// ============ 配置 ============
+const GRID = 40, CELL = 24, W = GRID*CELL;      // 960
+const MAP_X = 0, MAP_Y = 0;
+
+// 塔定义：占地(gr×gc)，占地位移由"锚点+offset"表示
+const TOWER_DEFS = {
+  core:    { name:"主基地", size:2, energyCost:0, hp:400, color:"#c9a227",
+             desc:"核心，被摧毁则失败", id:"1" },
+  solar:   { name:"太阳能塔", size:1, energyCost:40, color:"#f0d94a", range:0,
+             desc:"占地1×1，连续产能量", id:"2" },
+  gun:     { name:"机枪塔", size:1, energyCost:60, color:"#4aa8f0", range:3,
+             desc:"占地1×1，攻击射程内敌人", id:"3" },
+};
+const MAX_ENERGY = 400, START_ENERGY = 200;
+const SOLAR_RATE = 2.0;       // 能量/秒
+const GUN_DMG = 14, GUN_COOLDOWN = 0.5; // DPS≈28
+const BASE_HP = 400;
+
+// 怪物定义（生命统一由波数成长）
+const MON_DEFS = {
+  red:  { name:"红·标准", color:"#f85149", r:9,  speed:1.0, weight:1, revive:null },
+  green:{ name:"绿·坦克", color:"#3fb950", r:14, speed:0.6, weight:3, revive:null },
+  blue: { name:"蓝·敏捷", color:"#58a6ff", r:6,  speed:1.5, weight:2, revive:null },
+  yellow:{name:"黄·复生", color:"#f0d94a", r:9,  speed:1.0, weight:2, revive:"red" },
+};
+const MON_KEYS = ["red","green","blue","yellow"];
+// 权重 → 出怪随机采样（越重出现概率越高）
+function randomMonKey(){
+  const total = MON_KEYS.reduce((s,k)=>s+MON_DEFS[k].weight,0);
+  let r = Math.random()*total;
+  for (const k of MON_KEYS){ r -= MON_DEFS[k].weight; if (r<=0) return k; }
+  return "red";
+}
+
+// ============ 地图 ============
+// 0=可建, 1=道路(怪物行进), 2=基地占地(不可建)
+let grid = [];
+function initMap(){
+  grid = Array.from({length:GRID}, ()=>Array(GRID).fill(0));
+  // 主基地放在左侧中央，占地 2×2，作为怪物终点
+  const coreC = 2, coreR = Math.floor(GRID/2)-1; // 左上角
+  for (let r=coreR; r<coreR+2; r++) for (let c=coreC; c<coreC+2; c++) grid[r][c]=2;
+  // 道路：一条从左到右的蛇形路径？简化：怪物从右列出生，沿行向左直达基地。
+  // 让中间行(row 19,20)为通路，从最右到基地
+  for (let c=GRID-1; c>=coreC+2; c--) grid[19][c]=1; // 行19
+  // 归并：把基地左边缘与行19连通（行19已含c=coreC+2..，基地在c=2,3 行19,20）
+}
+initMap();
+
+// ============ 游戏状态 ============
+const state = {
+  energy: START_ENERGY, wave:1, paused:false, over:false, kills:0,
+  towers:[], monsters:[], bullets:[],
+  spawn: { accumulated:0, total:0, timer:0, interval:1.1 }, // 出怪进度
+  selTool:null,
+  time:0,
+};
+let canvas, ctx, animId;
+
+function waveBudget(n){ return 8 + 3*n; }
+function waveHp(n){ return 15 + 3*n; }
+function waveSpeed(n){ return 1 + 0.02*n; }
+function nextWaveThreshold(){ return state.spawn.total * 0.5; }
+
+function remainingFieldWeight(){
+  return state.monsters.filter(m=>m.alive && !m.toBase).reduce((s,m)=>s+MON_DEFS[m.type].weight,0);
+}
+
+// ============ 实体 ============
+function spawnMonster(type, col){
+  const def = MON_DEFS[type];
+  const r = col!==undefined ? col : GRID-1;
+  const speed = def.speed * waveSpeed(state.wave);
+  return {
+    type, x: r*CELL + CELL/2, y: 19*CELL + CELL/2,
+    hp: waveHp(state.wave), maxHp: waveHp(state.wave), r: def.r,
+    speed, weight: def.weight, def,
+    bob: Math.random()*6.28, dir:1, // 沿行向左
+    alive:true, toBase:false,
+  };
+}
+
+// ============ 建造 ============
+function canBuild(c, r, size){
+  for (let dr=0; dr<size; dr++) for (let dc=0; dc<size; dc++){
+    if (grid[r+dr] && grid[r+dr][c+dc] !== 0) return false;
+  }
+  return true;
+}
+function placeTower(kind, c, r){
+  const def = TOWER_DEFS[kind];
+  if (kind==="core") return;
+  if (state.energy < def.energyCost){ msg("能量不足！", "warn"); return; }
+  if (!canBuild(c,r,def.size)){ msg("此处不可建造！", "warn"); return; }
+  state.energy -= def.energyCost;
+  for (let dr=0; dr<def.size; dr++) for (let dc=0; dc<def.size; dc++) grid[r+dr][c+dc]=3; // 3=塔
+  const t = { kind, c, r, size:def.size, x:(c+def.size/2)*CELL, y:(r+def.size/2)*CELL,
+              cool:0, def };
+  if (kind==="gun") t.range = def.range*CELL;
+  state.towers.push(t);
+  msg(`建造 ${def.name}`, "info");
+}
+
+// ============ 伤害与死亡 ============
+function damageMonster(m, dmg){
+  m.hp -= dmg;
+  if (m.hp<=0 && m.alive){
+    m.alive=false;
+    state.kills++;
+    // 黄色 → 复活为红色
+    if (m.def.revive){
+      const revived = spawnMonster("red");
+      revived.x=m.x; revived.y=m.y; revived.bob=m.bob;
+      state.monsters.push(revived);
+    }
+    return true;
+  }
+  return false;
+}
+
+// ============ 更新 ============
+function update(dt){
+  if (state.over || state.paused) return;
+  state.time += dt;
+
+  // 1. 出怪
+  const budget = state.spawn.total;
+  if (budget>0 && state.spawn.accumulated < budget){
+    state.spawn.timer += dt;
+    while (state.spawn.timer >= state.spawn.interval && state.spawn.accumulated < budget){
+      state.spawn.timer -= state.spawn.interval;
+      const k = randomMonKey();
+      state.spawn.accumulated += MON_DEFS[k].weight;
+      state.monsters.push(spawnMonster(k));
+    }
+  }
+
+  // 2. 下一波判断：出完且场上剩余权重 <= 一半
+  if (state.spawn.accumulated >= budget){
+    if (remainingFieldWeight() <= nextWaveThreshold()){
+      startWave(state.wave+1);
+    }
+  }
+
+  // 3. 太阳能塔产能量
+  for (const t of state.towers) if (t.kind==="solar"){
+    state.energy = Math.min(MAX_ENERGY, state.energy + SOLAR_RATE*dt);
+  }
+
+  // 4. 机枪塔攻击
+  for (const t of state.towers) if (t.kind==="gun"){
+    t.cool -= dt;
+    // 找射程内最近(最左)的活怪
+    let target=null, best=Infinity;
+    for (const m of state.monsters){
+      if (!m.alive) continue;
+      const dx=m.x-t.x, dy=m.y-t.y;
+      if (dx*dx+dy*dy <= t.range*t.range && m.x<best){ best=m.x; target=m; }
+    }
+    if (target && t.cool<=0){
+      t.cool = GUN_COOLDOWN;
+      state.bullets.push({x:t.x,y:t.y,target,tx:target.x,ty:target.y});
+    }
+  }
+
+  // 5. 子弹飞行
+  for (let i=state.bullets.length-1;i>=0;i--){
+    const b=state.bullets[i];
+    if (!b.target || !b.target.alive){ state.bullets.splice(i,1); continue; }
+    const dx=b.target.x-b.x, dy=b.target.y-b.y, d=Math.hypot(dx,dy);
+    const step=500*dt;
+    if (d<=step || d<=6){
+      if (damageMonster(b.target, GUN_DMG)) {}
+      state.bullets.splice(i,1);
+    } else { b.x+=dx/d*step; b.y+=dy/d*step; }
+  }
+
+  // 6. 怪物移动与攻击基地
+  const core = state.towers.find(t=>t.kind==="core");
+  for (const m of state.monsters){
+    if (!m.alive) continue;
+    m.bob += dt*6;
+    if (m.toBase){
+      // 攻击基地
+      if (core){
+        core.hp -= 10*dt;
+        if (core.hp<=0){ core.hp=0; gameOver(); }
+      }
+      continue;
+    }
+    m.x -= m.speed * CELL * 0.5 * dt;  // 向左
+    // 到达基地右边缘 → 开始攻击
+    const baseEdgeX = (core.c+core.size)*CELL; // 基地右边界x
+    if (m.x - m.r <= baseEdgeX){
+      m.x = baseEdgeX + m.r;
+      m.toBase = true;
+    }
+  }
+
+  // 清理死亡
+  state.monsters = state.monsters.filter(m=>m.alive);
+}
+
+// ============ 波次 ============
+function startWave(n){
+  state.wave = n;
+  state.spawn.total = waveBudget(n);
+  state.spawn.accumulated = 0;
+  state.spawn.timer = 0;
+  msg(`⚔ 第 ${n} 波来袭！(总权重 ${state.spawn.total})`, "info");
+}
+
+// ============ 绘制 ============
+function draw(){
+  // 背景
+  ctx.fillStyle = "#1b2838"; ctx.fillRect(0,0,W,W);
+  // 格子
+  for (let r=0;r<GRID;r++) for (let c=0;c<GRID;c++){
+    const v=grid[r][c];
+    if (v===1) ctx.fillStyle="#2d3b4e";           // 道路
+    else if (v===0) ctx.fillStyle="#243447";      // 可建
+    else if (v===2) ctx.fillStyle="#4a3b10";      // 基地地
+    else ctx.fillStyle="#203047";                 // 塔
+    ctx.fillRect(MAP_X+c*CELL, MAP_Y+r*CELL, CELL, CELL);
+    ctx.strokeStyle="rgba(255,255,255,0.04)";
+    ctx.strokeRect(MAP_X+c*CELL, MAP_Y+r*CELL, CELL, CELL);
+  }
+  // 建造高亮
+  if (state.selTool && state.selTool!=="core" && !state.over){
+    const size=TOWER_DEFS[state.selTool].size;
+    ctx.fillStyle="rgba(90,255,90,0.15)";
+    for (let r=0;r<GRID;r++) for (let c=0;c<GRID;c++)
+      if (canBuild(c,r,size)){ ctx.fillRect(MAP_X+c*CELL,MAP_Y+r*CELL,CELL,CELL); }
+  }
+
+  // 塔
+  for (const t of state.towers) drawTower(t);
+
+  // 子弹
+  ctx.fillStyle="#fff";
+  for (const b of state.bullets){
+    ctx.beginPath(); ctx.arc(b.x,b.y,3,0,6.28); ctx.fill();
+  }
+
+  // 怪物
+  for (const m of state.monsters) drawMonster(m);
+
+  // 波次进度文字
+  ctx.fillStyle="#8b949e"; ctx.font="13px Microsoft YaHei";
+  ctx.fillText(`第 ${state.wave} 波 · 出怪 ${state.spawn.accumulated}/${state.spawn.total}`,
+    MAP_X+10, MAP_Y+22);
+}
+
+function drawTower(t){
+  const {x,y,size,def}=t;
+  const x0=x-size*CELL/2, y0=y-size*CELL/2, s=size*CELL;
+  // 底座
+  ctx.fillStyle=def.color; ctx.globalAlpha=.85;
+  ctx.fillRect(x0+2, y0+2, s-4, s-4);
+  ctx.globalAlpha=1;
+  ctx.strokeStyle="#00000055"; ctx.lineWidth=2; ctx.strokeRect(x0+2,y0+2,s-4,s-4);
+  // 图标
+  ctx.font="bold "+(size*CELL*0.5)+"px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle="#111";
+  if (t.kind==="core") ctx.fillText("🏰", x, y);
+  else if (t.kind==="solar") ctx.fillText("☀", x, y);
+  else ctx.fillText("🔫", x, y);
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  // 机枪塔射程
+  if (t.kind==="gun"){
+    ctx.beginPath(); ctx.arc(x,y,t.range,0,6.28);
+    ctx.strokeStyle="rgba(74,168,240,0.25)"; ctx.lineWidth=1; ctx.stroke();
+  }
+  // 核心血量条
+  if (t.kind==="core"){
+    const w=2*CELL;
+    ctx.fillStyle="#000"; ctx.fillRect(x-w/2,y0-8,w,5);
+    ctx.fillStyle="#f85149"; ctx.fillRect(x-w/2,y0-8,w*(t.hp/TOWER_DEFS.core.hp),5);
+  }
+}
+
+function drawMonster(m){
+  if (!m.alive) return;
+  const bobY = Math.abs(Math.sin(m.bob))*m.r*0.6;
+  const y = m.y - bobY;
+  // 阴影
+  ctx.fillStyle="rgba(0,0,0,0.3)";
+  ctx.beginPath(); ctx.ellipse(m.x, m.y+m.r*0.4, m.r, m.r*0.3,0,0,6.28); ctx.fill();
+  // 身体
+  ctx.fillStyle=m.def.color;
+  ctx.beginPath(); ctx.arc(m.x, y, m.r, 0, 6.28); ctx.fill();
+  ctx.strokeStyle="rgba(0,0,0,0.4)"; ctx.lineWidth=1.5; ctx.stroke();
+  // 高光
+  ctx.fillStyle="rgba(255,255,255,0.35)";
+  ctx.beginPath(); ctx.arc(m.x-m.r*0.3, y-m.r*0.3, m.r*0.28, 0, 6.28); ctx.fill();
+  // 血条
+  const w=m.r*2.4;
+  ctx.fillStyle="#000"; ctx.fillRect(m.x-w/2, y-m.r-9, w, 3.5);
+  ctx.fillStyle=m.hp>m.maxHp*0.5?"#3fb950":(m.hp>m.maxHp*0.25?"#f0d94a":"#f85149");
+  ctx.fillRect(m.x-w/2, y-m.r-9, w*Math.max(0,m.hp/m.maxHp), 3.5);
+}
+
+// ============ 消息 ============
+function msg(text, cls){
+  const el=document.getElementById("msg");
+  const d=document.createElement("div");
+  d.className=cls||"";
+  d.textContent=text;
+  el.appendChild(d);
+  el.scrollTop=el.scrollHeight;
+  while (el.children.length>30) el.removeChild(el.firstChild);
+}
+
+// ============ UI ============
+function buildToolbar(){
+  const tb=document.getElementById("toolbar");
+  for (const [k,def] of Object.entries(TOWER_DEFS)){
+    if (k==="core") continue;
+    const div=document.createElement("div");
+    div.className="tool"; div.dataset.kind=k;
+    div.innerHTML = `
+      <div class="icon"><div class="t-icon" style="background:${def.color}"></div></div>
+      <div class="info"><b>${def.name}</b><span>${def.desc}</span></div>
+      <span class="cost">⚡${def.energyCost}</span>`;
+    div.onclick=()=>toggleTool(k);
+    tb.appendChild(div);
+  }
+}
+function toggleTool(k){
+  if (state.selTool===k){ state.selTool=null; refreshToolbar(); return; }
+  state.selTool=k; refreshToolbar();
+}
+function refreshToolbar(){
+  document.querySelectorAll(".tool").forEach(el=>{
+    const k=el.dataset.kind;
+    el.classList.toggle("sel", state.selTool===k);
+    const cost=TOWER_DEFS[k].energyCost;
+    el.classList.toggle("disabled", state.energy<cost);
+  });
+}
+function updateStats(){
+  document.getElementById("st-wave").textContent=state.wave;
+  document.getElementById("st-energy").textContent=Math.floor(state.energy);
+  document.getElementById("st-mon").textContent=state.monsters.filter(m=>m.alive).length;
+  const core=state.towers.find(t=>t.kind==="core");
+  document.getElementById("st-hp").textContent=core?Math.ceil(core.hp):0;
+  document.getElementById("st-prog").textContent=`${state.spawn.accumulated}/${state.spawn.total}`;
+  document.getElementById("bar-prog").style.width =
+    state.spawn.total>0 ? (state.spawn.accumulated/state.spawn.total*100)+"%" : "0%";
+  document.getElementById("st-next").textContent=
+    state.spawn.accumulated>=state.spawn.total ? "刷新中..." : Math.ceil(remainingFieldWeight()-nextWaveThreshold());
+}
+
+// ============ 输入 ============
+canvas.addEventListener("mousemove", e=>{
+  const rect=canvas.getBoundingClientRect();
+  state.mx = Math.floor((e.clientX-rect.left)/CELL);
+  state.my = Math.floor((e.clientY-rect.top)/CELL);
+});
+canvas.addEventListener("click", e=>{
+  const rect=canvas.getBoundingClientRect();
+  const c=Math.floor((e.clientX-rect.left)/CELL);
+  const r=Math.floor((e.clientY-rect.top)/CELL);
+  if (c<0||c>=GRID||r<0||r>=GRID) return;
+  if (state.selTool && state.selTool!=="core") placeTower(state.selTool, c, r);
+  refreshToolbar();
+});
+window.addEventListener("keydown", e=>{
+  if (e.key==="1") toggleTool("solar");
+  else if (e.key==="2") toggleTool("gun");
+  else if (e.key==="Escape"){ state.selTool=null; refreshToolbar(); }
+  else if (e.key===" "){ e.preventDefault(); state.paused=!state.paused; }
+});
+document.getElementById("btn-slow").onclick=()=>{ state.paused=!state.paused; };
+
+// ============ 主循环 ============
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt);
+  draw();
+  updateStats();
+  refreshToolbar();
+  animId=requestAnimationFrame(loop);
+}
+
+function gameOver(){
+  state.over=true;
+  document.getElementById("gameover").style.display="flex";
+  document.getElementById("go-wave").textContent=state.wave;
+  document.getElementById("go-kill").textContent=state.kills;
+}
+document.getElementById("btn-restart").onclick=()=>location.reload();
+
+// ============ 启动 ============
+canvas=document.getElementById("game"); ctx=canvas.getContext("2d");
+buildToolbar();
+// 主基地实体
+const coreC=2, coreR=Math.floor(GRID/2)-1;
+const coreTower={kind:"core",c:coreC,r:coreR,size:2,
+  x:(coreC+1)*CELL, y:(coreR+1)*CELL, hp:BASE_HP, def:TOWER_DEFS.core};
+state.towers.push(coreTower);
+startWave(1);
+updateStats();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
